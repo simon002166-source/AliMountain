@@ -12,37 +12,64 @@
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <style>
+    * {
+      box-sizing: border-box;
+    }
     html, body {
-      height: 100dvh;
-      max-height: 100dvh;
+      width: 100%;
+      height: 100%;
       margin: 0;
       padding: 0;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
     }
 
-    /* 手機版強制上下嚴格 1:1 (各佔 50% 視窗高度) */
+    /* 手機版：使用 fixed 絕對定位，強制上下嚴格各佔 50% (1/2) 螢幕高度 */
     @media (max-width: 767px) {
-      #app-container {
-        display: flex;
-        flex-direction: column;
-        height: 100dvh;
-      }
       #top-panel {
-        height: 50dvh;
-        max-height: 50dvh;
-        min-height: 0;
-        flex: 0 0 50dvh;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 50% !important;
+        max-height: 50% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        z-index: 20;
       }
       #map-panel {
-        height: 50dvh;
-        max-height: 50dvh;
-        min-height: 0;
-        flex: 0 0 50dvh;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 50% !important;
+        max-height: 50% !important;
+        z-index: 10;
       }
     }
 
-    /* GPS 目前位置脈衝動畫 */
+    /* 桌面版：左右並排 */
+    @media (min-width: 768px) {
+      #app-container {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        height: 100%;
+      }
+      #top-panel {
+        width: 450px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      #map-panel {
+        flex: 1;
+        height: 100%;
+        position: relative;
+      }
+    }
+
+    /* GPS 目前位置藍點脈衝動畫 */
     .gps-pulse-wrapper {
       position: relative;
       width: 24px;
@@ -72,97 +99,69 @@
       0% { transform: scale(0.6); opacity: 0.9; }
       80%, 100% { transform: scale(1.9); opacity: 0; }
     }
-
-    /* 自訂捲軸 */
-    ::-webkit-scrollbar {
-      width: 5px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 3px;
-    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
 
-  <!-- 主容器：手機版上下各 50%，桌面版左右並排 -->
-  <div id="app-container" class="flex flex-col md:flex-row h-[100dvh] w-full overflow-hidden">
+  <div id="app-container">
 
-    <!-- 上半部（手機佔 1/2）：標題 ＋ 天數按鈕 ＋ 可捲動行程卡片 -->
-    <section id="top-panel" class="w-full md:w-[440px] lg:w-[480px] md:h-full flex flex-col bg-white border-b-2 md:border-b-0 md:border-r border-slate-300 z-20 shrink-0">
+    <!-- 上半部（手機固定佔螢幕上方 50%）：標題 ＋ 切換鈕 ＋ 可捲動行程清單 -->
+    <section id="top-panel" class="bg-white border-b-2 md:border-b-0 md:border-r border-slate-300">
 
-      <!-- 綠色主題頂部 Header（精簡高度讓出更多空間） -->
-      <header class="bg-[#1b5e36] text-white px-3.5 py-2.5 shrink-0">
+      <!-- 綠色主題頂部 Header -->
+      <header class="bg-[#1b5e36] text-white px-3 py-2 shrink-0">
         <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-9 h-9 rounded-lg bg-[#2e7d4b] flex items-center justify-center shrink-0 shadow-inner">
-              <i class="fa-solid fa-mountain-sun text-emerald-100 text-base"></i>
+          <div class="flex items-center gap-2 min-w-0">
+            <div class="w-8 h-8 rounded-lg bg-[#2e7d4b] flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-mountain-sun text-emerald-100 text-sm"></i>
             </div>
             <div class="min-w-0">
-              <h1 class="text-base font-bold tracking-wide truncate">阿里山漫活二日遊</h1>
-              <p class="text-[11px] text-emerald-100/90 truncate">11/29 入住阿里山閣大飯店｜高雄出發（無日出悠閒版）</p>
+              <h1 class="text-sm md:text-base font-bold tracking-wide truncate">阿里山漫活二日遊</h1>
+              <p class="text-[10px] md:text-[11px] text-emerald-100/90 truncate">11/29 入住阿里山閣大飯店｜高雄出發（無日出悠閒版）</p>
             </div>
           </div>
           <!-- GPS 狀態膠囊 -->
-          <div class="flex items-center gap-1.5 text-[11px] bg-[#134627] px-2 py-1 rounded-full border border-emerald-600/50 shrink-0">
+          <div class="flex items-center gap-1.5 text-[10px] bg-[#134627] px-2 py-0.5 rounded-full border border-emerald-600/50 shrink-0">
             <span id="gps-status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-            <span id="gps-status-text">定位中</span>
+            <span id="gps-status-text">GPS定位中</span>
           </div>
-        </div>
-
-        <!-- 起訖點提示條 -->
-        <div class="mt-2 bg-[#144929] rounded-full px-3 py-1 text-[11px] text-emerald-100 flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-car text-amber-300"></i>
-          <span>起點：高雄</span>
-          <i class="fa-solid fa-arrow-right text-[10px] text-emerald-300"></i>
-          <i class="fa-solid fa-hotel text-amber-300"></i>
-          <span>阿里山閣大飯店</span>
         </div>
       </header>
 
       <!-- 天數切換按鈕列 -->
-      <div class="grid grid-cols-3 gap-2 px-3 py-2 bg-slate-50 border-b border-slate-200 shrink-0">
+      <div class="grid grid-cols-3 gap-1.5 px-2.5 py-1.5 bg-slate-50 border-b border-slate-200 shrink-0">
         <button onclick="filterDay('all')" id="tab-all"
-          class="tab-btn py-1.5 px-2 rounded-lg text-xs font-bold bg-[#1b5e36] text-white shadow-sm flex items-center justify-center gap-1 transition">
+          class="tab-btn py-1 px-2 rounded-lg text-xs font-bold bg-[#1b5e36] text-white shadow-sm flex items-center justify-center gap-1">
           <i class="fa-solid fa-list-ul"></i> 全部行程
         </button>
         <button onclick="filterDay(1)" id="tab-1"
-          class="tab-btn py-1.5 px-2 rounded-lg text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 flex items-center justify-center gap-1 transition">
+          class="tab-btn py-1 px-2 rounded-lg text-xs font-bold bg-white text-slate-700 border border-slate-200 flex items-center justify-center gap-1">
           <i class="fa-regular fa-calendar-check text-[#1b5e36]"></i> 第一天 (11/29)
         </button>
         <button onclick="filterDay(2)" id="tab-2"
-          class="tab-btn py-1.5 px-2 rounded-lg text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 flex items-center justify-center gap-1 transition">
+          class="tab-btn py-1 px-2 rounded-lg text-xs font-bold bg-white text-slate-700 border border-slate-200 flex items-center justify-center gap-1">
           <i class="fa-regular fa-calendar-check text-[#1b5e36]"></i> 第二天 (11/30)
         </button>
       </div>
 
-      <!-- 行程卡片捲動區（自動填滿上半部剩餘空間並內部捲動） -->
-      <div id="itinerary-list" class="flex-1 overflow-y-auto px-3 py-2 space-y-2.5 bg-slate-50/70 min-h-0">
+      <!-- 行程卡片捲動區 -->
+      <div id="itinerary-list" class="flex-1 overflow-y-auto px-2.5 py-2 space-y-2 bg-slate-50/70 min-h-0">
         <!-- JS 動態產生 -->
-      </div>
-
-      <!-- 底部提示列 -->
-      <div class="px-3 py-1.5 bg-white border-t border-slate-200 text-[11px] text-slate-500 flex items-center justify-between shrink-0">
-        <span><i class="fa-solid fa-circle-info text-[#1b5e36] mr-1"></i>點擊卡片移動焦點，點擊「導航」開啟地圖</span>
-        <span class="font-semibold text-slate-600">共 6 個據點</span>
       </div>
     </section>
 
-    <!-- 下半部（手機佔 1/2）：互動地圖區 -->
-    <section id="map-panel" class="relative w-full md:flex-1 md:h-full bg-slate-200 z-10">
+    <!-- 下半部（手機固定佔螢幕下方 50%）：互動地圖區 -->
+    <section id="map-panel" class="bg-slate-200">
       <div id="map" class="w-full h-full"></div>
 
       <!-- 右下角懸浮操作按鈕：定位到我 / 檢視全覽 -->
       <div class="absolute bottom-6 right-3 z-[1000] flex flex-col gap-2">
         <button onclick="centerOnUser()" title="定位到我的目前位置"
-          class="bg-white hover:bg-blue-50 text-blue-600 border border-slate-300 shadow-lg w-10 h-10 rounded-full flex items-center justify-center transition active:scale-95">
+          class="bg-white hover:bg-blue-50 text-blue-600 border border-slate-300 shadow-lg w-10 h-10 rounded-full flex items-center justify-center active:scale-95">
           <i class="fa-solid fa-location-crosshairs text-base"></i>
         </button>
         <button onclick="fitAllMarkers()" title="顯示完整行程範圍"
-          class="bg-white hover:bg-emerald-50 text-[#1b5e36] border border-slate-300 shadow-lg w-10 h-10 rounded-full flex items-center justify-center transition active:scale-95">
+          class="bg-white hover:bg-emerald-50 text-[#1b5e36] border border-slate-300 shadow-lg w-10 h-10 rounded-full flex items-center justify-center active:scale-95">
           <i class="fa-solid fa-expand text-sm"></i>
         </button>
       </div>
@@ -371,26 +370,21 @@
         const pillClass = stop.day === 1 ? 'bg-emerald-50 text-[#1b5e36]' : 'bg-blue-50 text-blue-700';
 
         const card = document.createElement('div');
-        card.className = `bg-white rounded-xl p-2.5 border border-slate-200 border-l-4 ${borderClass} shadow-sm hover:shadow transition cursor-pointer`;
+        card.className = `bg-white rounded-xl p-2.5 border border-slate-200 border-l-4 ${borderClass} shadow-sm cursor-pointer`;
         card.innerHTML = `
-          <div class="flex items-center justify-between gap-2.5">
+          <div class="flex items-center justify-between gap-2">
             <div onclick="focusStop('${stop.id}')" class="flex-1 min-w-0">
-              <span class="inline-block text-[11px] font-bold px-2 py-0.5 rounded ${pillClass} mb-1">
+              <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded ${pillClass} mb-0.5">
                 ${stop.time}
               </span>
               <h3 class="font-bold text-slate-900 text-sm truncate">${stop.title}</h3>
-              <p class="text-xs text-slate-600 mt-0.5 line-clamp-2 leading-relaxed">${stop.desc}</p>
+              <p class="text-xs text-slate-600 mt-0.5 leading-snug">${stop.desc}</p>
             </div>
-            <div class="flex flex-col items-center gap-1.5 shrink-0">
-              <button onclick="focusStop('${stop.id}')" title="在地圖上檢視"
-                class="w-9 h-9 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition">
-                <i class="fa-solid ${stop.icon} text-sm"></i>
-              </button>
-              <a href="${navUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"
-                class="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition active:scale-95">
-                <i class="fa-solid fa-diamond-turn-right"></i> 導航
-              </a>
-            </div>
+            <a href="${navUrl}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()"
+              class="shrink-0 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex flex-col items-center gap-0.5 shadow-sm active:scale-95">
+              <i class="fa-solid fa-diamond-turn-right text-sm"></i>
+              <span>導航</span>
+            </a>
           </div>
         `;
         container.appendChild(card);
@@ -406,10 +400,10 @@
 
     function filterDay(day) {
       document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.className = 'tab-btn py-1.5 px-2 rounded-lg text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-100 flex items-center justify-center gap-1 transition';
+        btn.className = 'tab-btn py-1 px-2 rounded-lg text-xs font-bold bg-white text-slate-700 border border-slate-200 flex items-center justify-center gap-1';
       });
       const activeBtn = document.getElementById(`tab-${day}`);
-      activeBtn.className = 'tab-btn py-1.5 px-2 rounded-lg text-xs font-bold bg-[#1b5e36] text-white shadow-sm flex items-center justify-center gap-1 transition';
+      activeBtn.className = 'tab-btn py-1 px-2 rounded-lg text-xs font-bold bg-[#1b5e36] text-white shadow-sm flex items-center justify-center gap-1';
 
       renderItinerary(day);
 
@@ -422,10 +416,11 @@
       }
     }
 
-    // 初始化
+    // 初始化並重新計算地圖容器高度
     renderItinerary('all');
     window.addEventListener('resize', () => map.invalidateSize());
-    setTimeout(() => map.invalidateSize(), 250);
+    setTimeout(() => { map.invalidateSize(true); }, 300);
+    setTimeout(() => { map.invalidateSize(true); }, 800);
   </script>
 </body>
 </html>
