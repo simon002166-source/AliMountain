@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阿里山漫活二日遊行程指南</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+                    },
+                    colors: {
+                        forest: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        mountain: {
+                            50: '#f8fafc',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', 'Noto Sans TC', sans-serif; }
+        .leaflet-popup-content-wrapper { border-radius: 1rem; padding: 0.25rem; }
+        .leaflet-popup-content { margin: 1rem; line-height: 1.5; }
+        /* Custom pulsing GPS marker animation */
+        @@keyframes gps-pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        .gps-marker-pulse {
+            animation: gps-pulse 2s infinite;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 flex flex-col">
+
+    <!-- Header / Navbar -->
+    <header class="bg-forest-900 text-white shadow-md z-20 flex-shrink-0">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-forest-700 p-2.5 rounded-xl shadow-inner text-emerald-300">
+                    <i class="fa-solid fa-mountain-sun text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight">阿里山漫活二日遊</h1>
+                    <p class="text-xs sm:text-sm text-emerald-200/80">11/29 入住阿里山閣大飯店 ｜ 高雄出發（無日出悠閒版）</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-xs sm:text-sm bg-forest-800/80 px-3 py-1.5 rounded-lg border border-forest-700">
+                <i class="fa-solid fa-car text-amber-400"></i>
+                <span>起點：高雄</span>
+                <i class="fa-solid fa-arrow-right text-forest-300 mx-1"></i>
+                <i class="fa-solid fa-hotel text-amber-400"></i>
+                <span>阿里山閣大飯店</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace (Split Screen: Itinerary & Map) -->
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+
+        <!-- Left Column: Itinerary Panel -->
+        <section class="w-full lg:w-5/12 xl:w-4/12 flex flex-col bg-white border-r border-slate-200 shadow-sm z-10 overflow-hidden">
+            
+            <!-- Day Filter Tabs -->
+            <div class="flex border-b border-slate-200 bg-slate-50 p-2 gap-2 flex-shrink-0">
+                <button onclick="switchTab('all')" id="tab-all" class="flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg bg-forest-900 text-white shadow transition-all duration-200 flex items-center justify-center space-x-1.5">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>全部行程</span>
+                </button>
+                <button onclick="switchTab('day1')" id="tab-day1" class="flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg bg-white text-slate-600 hover:bg-slate-100 transition-all duration-200 flex items-center justify-center space-x-1.5 border border-slate-200">
+                    <i class="fa-solid fa-calendar-day text-forest-700"></i>
+                    <span>第一天 (11/29)</span>
+                </button>
+                <button onclick="switchTab('day2')" id="tab-day2" class="flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg bg-white text-slate-600 hover:bg-slate-100 transition-all duration-200 flex items-center justify-center space-x-1.5 border border-slate-200">
+                    <i class="fa-solid fa-calendar-day text-forest-700"></i>
+                    <span>第二天 (11/30)</span>
+                </button>
+            </div>
+
+            <!-- Itinerary Cards Container -->
+            <div id="itinerary-container" class="flex-1 overflow-y-auto p-4 space-y-4">
+                
+                <!-- Day 1 Header -->
+                <div class="day-group day-1-content">
+                    <div class="flex items-center space-x-2 mb-3">
+                        <span class="bg-emerald-100 text-forest-800 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">Day 1</span>
+                        <h2 class="font-bold text-slate-900 text-base">高雄 ➔ 奮起湖 ➔ 阿里山森林遊樂區</h2>
+                    </div>
+
+                    <!-- Stops for Day 1 -->
+                    <div class="space-y-3">
+                        <!-- Stop 1 -->
+                        <div onclick="focusMarker(0)" class="itinerary-card group cursor-pointer bg-white border border-slate-200 hover:border-forest-600 rounded-xl p-3.5 shadow-xs transition-all hover:shadow-md relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 group-hover:bg-forest-600"></div>
+                            <div class="flex justify-between items-start pl-2">
+                                <div>
+                                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">08:30 出發</span>
+                                    <h3 class="font-bold text-slate-900 text-sm mt-1">高雄出發</h3>
+                                    <p class="text-xs text-slate-600 mt-1">國道三號 ➔ 中埔交流道 ➔ 台18線阿里山公路，車程約2.5-3小時。</p>
+                                </div>
+                                <div class="bg-slate-100 group-hover:bg-forest-50 p-2 rounded-lg text-slate-500 group-hover:text-forest-700 transition-colors">
+                                    <i class="fa-solid fa-car"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stop 2 -->
+                        <div onclick="focusMarker(1)" class="itinerary-card group cursor-pointer bg-white border border-slate-200 hover:border-forest-600 rounded-xl p-3.5 shadow-xs transition-all hover:shadow-md relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 group-hover:bg-forest-600"></div>
+                            <div class="flex justify-between items-start pl-2">
+                                <div>
+                                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">11:30 - 13:30</span>
+                                    <h3 class="font-bold text-slate-900 text-sm mt-1">奮起湖車站 / 老街午餐</h3>
+                                    <p class="text-xs text-slate-600 mt-1">漫步百年老街、肖楠母樹林，品嚐美味奮起湖便當與愛玉子。</p>
+                                </div>
+                                <div class="bg-slate-100 group-hover:bg-forest-50 p-2 rounded-lg text-slate-500 group-hover:text-forest-700 transition-colors">
+                                    <i class="fa-solid fa-utensils"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stop 3 -->
+                        <div onclick="focusMarker(2)" class="itinerary-card group cursor-pointer bg-white border border-slate-200 hover:border-forest-600 rounded-xl p-3.5 shadow-xs transition-all hover:shadow-md relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 group-hover:bg-forest-600"></div>
+                            <div class="flex justify-between items-start pl-2">
+                                <div>
+                                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">14:30 - 15:30</span>
+                                    <h3 class="font-bold text-slate-900 text-sm mt-1">阿里山國家森林遊樂區入口</h3>
+                                    <p class="text-xs text-slate-600 mt-1">購票入園，並利用飯店接駁車或園區接駁前往深處飯店。</p>
+                                </div>
+                                <div class="bg-slate-100 group-hover:bg-forest-50 p-2 rounded-lg text-slate-500 group-hover:text-forest-700 transition-colors">
+                                    <i class="fa-solid fa-ticket"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stop 4 -->
+                        <div onclick="focusMarker(3)" class="itinerary-card group cursor-pointer bg-white border border-slate-200 hover:border-forest-600 rounded-xl p-3.5 shadow-xs transition-all hover:shadow-md relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-500 group-hover:bg-amber-600"></div>
+                            <div class="flex justify-between items-start pl-2">
+                                <div>
+                                    <span class="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">15:30 入住 / 11/29</span>
+                                    <h3 class="font-bold text-slate-900 text-sm mt-1">阿里山閣大飯店</h3>
+                                    <p class="text-xs text-slate-600 mt-1">位於園區最深處（沼平車站旁），環境清幽。放行李後漫步沼平公園、姊妹潭。</p>
+                                </div>
+                                <div class="bg-amber-50 group-hover:bg-amber-100 p-2 rounded-lg text-amber-600 transition-colors">
+                                    <i class="fa-solid fa-hotel"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <hr class="border-slate-200 my-4 day-divider">
+
+                <!-- Day 2 Header -->
+                <div class="day-group day-2-content">
+                    <div class="flex items-center space-x-2 mb-3">
+                        <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">Day 2</span>
+                        <h2 class="font-bold text-slate-900 text-base">巨木群棧道 ➔ 阿里山郵局 ➔ 賦歸</h2>
+                    </div>
+
+                    <!-- Stops for Day 2 -->
+                    <div class="space-y-3">
+                        <!-- Stop 5 -->
+                        <div onclick="focusMarker(4)" class="itinerary-card group cursor-pointer bg-white border border-slate-200 hover:border-forest-600 rounded-xl p-3.5 shadow-xs transition-all hover:shadow-md relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 group-hover:bg-forest-600"></div>
+                            <div class="flex justify-between items-start pl-2">
+                                <div>
+                                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">09:30 - 11:30</span>
+                                    <h3 class="font-bold text-slate-900 text-sm mt-1">巨木群棧道與阿里山郵局</h3>
+                                    <p class="text-xs text-slate-600 mt-1">睡到自然醒享用早餐，漫步欣賞千歲檜、香林神木，並造訪全台最高古色古香郵局。</p>
+                                </div>
+                                <div class="bg-slate-100 group-hover:bg-forest-50 p-2 rounded-lg text-slate-500 group-hover:text-forest-700 transition-colors">
+                                    <i class="fa-solid fa-tree"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stop 6 -->
+                        <div onclick="focusMarker(5)" class="itinerary-card group cursor-pointer bg-white border border-slate-200 hover:border-forest-600 rounded-xl p-3.5 shadow-xs transition-all hover:shadow-md relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 group-hover:bg-forest-600"></div>
+                            <div class="flex justify-between items-start pl-2">
+                                <div>
+                                    <span class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">12:30 賦歸</span>
+                                    <h3 class="font-bold text-slate-900 text-sm mt-1">快樂賦歸（返回高雄）</h3>
+                                    <p class="text-xs text-slate-600 mt-1">於園區外用餐後開車下山，平安快樂返回高雄溫暖的家。</p>
+                                </div>
+                                <div class="bg-slate-100 group-hover:bg-forest-50 p-2 rounded-lg text-slate-500 group-hover:text-forest-700 transition-colors">
+                                    <i class="fa-solid fa-house-chimney"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Footer info in Sidebar -->
+            <div class="p-3 bg-slate-100 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center flex-shrink-0">
+                <span><i class="fa-solid fa-circle-info mr-1 text-emerald-600"></i>點擊行程卡片可移動地圖焦點</span>
+                <span class="font-medium text-slate-700">共 6 個重要據點</span>
+            </div>
+        </section>
+
+        <!-- Right Column: Interactive Leaflet Map -->
+        <section class="w-full lg:w-7/12 xl:w-8/12 h-[450px] lg:h-auto relative z-0">
+            <div id="map" class="w-full h-full"></div>
+            
+            <!-- GPS Tracking Control Button -->
+            <div class="absolute bottom-6 right-6 z-[400]">
+                <button onclick="toggleGpsTracking()" id="gps-btn" class="bg-white hover:bg-slate-100 text-slate-700 font-medium px-4 py-2.5 rounded-xl shadow-lg border border-slate-200 flex items-center space-x-2 text-xs transition-all">
+                    <i class="fa-solid fa-location-crosshairs text-blue-600 text-sm"></i>
+                    <span id="gps-status-text">開啟 GPS 定位</span>
+                </button>
+            </div>
+
+            <!-- Map Overlay Controls / Legend -->
+            <div class="absolute top-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-xl shadow-lg border border-slate-200 z-[400] text-xs space-y-2 max-w-xs hidden sm:block">
+                <div class="font-bold text-slate-900 border-b pb-1.5 flex items-center justify-between">
+                    <span>地圖圖例說明</span>
+                    <i class="fa-solid fa-map-location-dot text-emerald-700"></i>
+                </div>
+                <div class="space-y-1.5 pt-1">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-full bg-emerald-600 inline-block"></span>
+                        <span class="text-slate-700">一般景點 / 轉運站</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                        <span class="text-slate-700">住宿飯店 (阿里山閣)</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span>
+                        <span class="text-slate-700">您的即時 GPS 位置</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="w-4 h-1 bg-emerald-500 inline-block"></span>
+                        <span class="text-slate-700">Day 1 行車路線</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        // Initialize Map centered around Alishan / Chiayi region
+        const map = L.map('map').setView([23.5125, 120.8030], 12);
+
+        // Add OpenStreetMap Tile Layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 18,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Define Locations Data with Google Maps Navigation URLs
+        const locations = [
+            {
+                name: "高雄出發點",
+                day: "day1",
+                coords: [22.6273, 120.3014],
+                desc: "<strong>08:30 高雄準時出發</strong><br>經國道三號與台18線阿里山公路往北行駛。",
+                iconColor: "emerald",
+                navUrl: "https://www.google.com/maps/dir/?api=1&destination=22.6273,120.3014&travelmode=driving"
+            },
+            {
+                name: "奮起湖車站 / 老街",
+                day: "day1",
+                coords: [23.5085, 120.6934],
+                desc: "<strong>11:30 - 13:30 奮起湖老街</strong><br>品嚐奮起湖便當、愛玉子，漫步森林老街。",
+                iconColor: "emerald",
+                navUrl: "https://www.google.com/maps/dir/?api=1&destination=奮起湖車站&travelmode=driving"
+            },
+            {
+                name: "阿里山森林遊樂區入口",
+                day: "day1",
+                coords: [23.5113, 120.7958],
+                desc: "<strong>14:30 購票入園</strong><br>驗票入園並準備轉乘飯店接駁車進入園區深處。",
+                iconColor: "emerald",
+                navUrl: "https://www.google.com/maps/dir/?api=1&destination=阿里山國家森林遊樂區&travelmode=driving"
+            },
+            {
+                name: "阿里山閣大飯店 (11/29 入住)",
+                day: "day1",
+                coords: [23.5135, 120.8122],
+                desc: "<strong>15:30 阿里山閣大飯店</strong><br>位於沼平車站旁、園區最深處。今晚入住於此，下午漫步沼平公園與姊妹潭。",
+                iconColor: "amber",
+                navUrl: "https://www.google.com/maps/dir/?api=1&destination=阿里山閣大飯店&travelmode=driving"
+            },
+            {
+                name: "巨木群棧道與阿里山郵局",
+                day: "day2",
+                coords: [23.5120, 120.8065],
+                desc: "<strong>09:30 漫步神木群</strong><br>欣賞千年紅檜、香林神木，並造訪全台最高郵局。",
+                iconColor: "emerald",
+                navUrl: "https://www.google.com/maps/dir/?api=1&destination=阿里山郵局&travelmode=driving"
+            },
+            {
+                name: "賦歸返回高雄",
+                day: "day2",
+                coords: [22.6273, 120.3014],
+                desc: "<strong>12:30 快樂賦歸</strong><br>用完午餐後開車下山，平安返回高雄。",
+                iconColor: "emerald",
+                navUrl: "https://www.google.com/maps/dir/?api=1&destination=高雄市&travelmode=driving"
+            }
+        ];
+
+        let markers = [];
+        let userMarker = null;
+        let userAccuracyCircle = null;
+        let watchId = null;
+        let isTracking = false;
+
+        // Create Custom Icons
+        function createCustomIcon(color) {
+            const bgClass = color === 'amber' ? '#f59e0b' : '#10b981';
+            const iconSymbol = color === 'amber' ? 'fa-hotel' : 'fa-location-dot';
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="background-color: ${bgClass}; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); border: 2px solid white;"><i class="fa-solid ${iconSymbol} text-xs"></i></div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16],
+                popupAnchor: [0, -16]
+            });
+        }
+
+        // Add Markers to Map with Navigation Link in Popup
+        locations.forEach((loc, index) => {
+            const popupHtml = `<div style="font-family: 'Inter', sans-serif; font-size: 13px; min-width: 180px;">
+                <b style="font-size: 14px; color: #0f172a;">${loc.name}</b><br><br>
+                ${loc.desc}<br>
+                <div style="margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                    <a href="${loc.navUrl}" target="_blank" style="display: inline-flex; align-items: center; background-color: #2563eb; color: white; padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 500;">
+                        <i class="fa-solid fa-diamond-turn-right" style="margin-right: 5px;"></i> 導航到此地點
+                    </a>
+                </div>
+            </div>`;
+
+            // Also update itinerary card HTML to include navigation button
+            const cardEl = document.querySelectorAll('.itinerary-card')[index];
+            if(cardEl) {
+                const navDiv = document.createElement('div');
+                navDiv.className = "mt-2 pt-2 border-t border-slate-100 flex justify-end";
+                navDiv.innerHTML = `<a href="${loc.navUrl}" target="_blank" onclick="event.stopPropagation();" class="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors">
+                    <i class="fa-solid fa-diamond-turn-right"></i>
+                    <span>Google 導航</span>
+                </a>`;
+                cardEl.querySelector('div > div:first-child').appendChild(navDiv);
+            }
+
+            const marker = L.marker(loc.coords, { icon: createCustomIcon(loc.iconColor) }).addTo(map);
+            marker.bindPopup(popupHtml);
+            markers.push(marker);
+        });
+
+        // Add Route Lines
+        const day1Coords = [
+            [22.6273, 120.3014],
+            [23.3000, 120.5500],
+            [23.5085, 120.6934],
+            [23.5113, 120.7958],
+            [23.5135, 120.8122]
+        ];
+        L.polyline(day1Coords, { color: '#10b981', weight: 4, opacity: 0.8 }).addTo(map);
+
+        const day2Coords = [
+            [23.5135, 120.8122],
+            [23.5120, 120.8065],
+            [23.5113, 120.7958],
+            [23.3000, 120.5500],
+            [22.6273, 120.3014]
+        ];
+        L.polyline(day2Coords, { color: '#3b82f6', weight: 4, opacity: 0.8, dashArray: '8, 8' }).addTo(map);
+
+        // Fit map bounds to show all markers initially
+        const group = new L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.1));
+
+        // Function to focus on specific marker when card is clicked
+        function focusMarker(index) {
+            const marker = markers[index];
+            map.setView(marker.getLatLng(), 15, { animate: true, duration: 0.8 });
+            marker.openPopup();
+        }
+
+        // Real-time GPS Geolocation Tracking via watchPosition
+        function toggleGpsTracking() {
+            const btnText = document.getElementById('gps-status-text');
+            const gpsBtn = document.getElementById('gps-btn');
+
+            if (!isTracking) {
+                if (!navigator.geolocation) {
+                    alert("您的瀏覽器不支援地理定位功能 (Geolocation)");
+                    return;
+                }
+
+                btnText.innerText = "正在定位中...";
+                gpsBtn.classList.add('bg-blue-50', 'border-blue-300');
+
+                watchId = navigator.geolocation.watchPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        const accuracy = position.coords.accuracy;
+                        const latLng = [lat, lng];
+
+                        btnText.innerText = "GPS 定位中 (即時更新)";
+
+                        // Create or update user location marker
+                        if (!userMarker) {
+                            const userIcon = L.divIcon({
+                                className: 'custom-user-icon',
+                                html: `<div class="gps-marker-pulse" style="background-color: #3b82f6; width: 22px; height: 22px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(59,130,246,0.8);"></div>`,
+                                iconSize: [22, 22],
+                                iconAnchor: [11, 11]
+                            });
+                            userMarker = L.marker(latLng, { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+                            userMarker.bindPopup("<b>您的目前位置</b>");
+                        } else {
+                            userMarker.setLatLng(latLng);
+                        }
+
+                        // Create or update accuracy circle
+                        if (!userAccuracyCircle) {
+                            userAccuracyCircle = L.circle(latLng, {
+                                radius: accuracy,
+                                color: '#3b82f6',
+                                fillColor: '#3b82f6',
+                                fillOpacity: 0.15,
+                                weight: 1
+                            }).addTo(map);
+                        } else {
+                            userAccuracyCircle.setLatLng(latLng);
+                            userAccuracyCircle.setRadius(accuracy);
+                        }
+
+                        // Pan map to user location on first fix or update
+                        map.setView(latLng, 15, { animate: true });
+                        isTracking = true;
+                    },
+                    (error) => {
+                        console.error(error);
+                        alert("無法取得您的 GPS 位置，請確認定位權限已開啟。");
+                        btnText.innerText = "開啟 GPS 定位";
+                        gpsBtn.classList.remove('bg-blue-50', 'border-blue-300');
+                        isTracking = false;
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        maximumAge: 10000,
+                        timeout: 15000
+                    }
+                );
+            } else {
+                if (watchId !== null) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                }
+                if (userMarker) {
+                    map.removeLayer(userMarker);
+                    userMarker = null;
+                }
+                if (userAccuracyCircle) {
+                    map.removeLayer(userAccuracyCircle);
+                    userAccuracyCircle = null;
+                }
+                isTracking = false;
+                btnText.innerText = "開啟 GPS 定位";
+                gpsBtn.classList.remove('bg-blue-50', 'border-blue-300');
+            }
+        }
+
+        // Tab Filtering Logic
+        function switchTab(tab) {
+            const btnAll = document.getElementById('tab-all');
+            const btnDay1 = document.getElementById('tab-day1');
+            const btnDay2 = document.getElementById('tab-day2');
+            
+            const day1Groups = document.querySelectorAll('.day-1-content');
+            const day2Groups = document.querySelectorAll('.day-2-content');
+            const dayDivider = document.querySelector('.day-divider');
+
+            [btnAll, btnDay1, btnDay2].forEach(b => {
+                b.className = "flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg bg-white text-slate-600 hover:bg-slate-100 transition-all duration-200 flex items-center justify-center space-x-1.5 border border-slate-200";
+            });
+
+            if(tab === 'all') {
+                btnAll.className = "flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg bg-forest-900 text-white shadow transition-all duration-200 flex items-center justify-center space-x-1.5";
+                day1Groups.forEach(el => el.style.display = 'block');
+                day2Groups.forEach(el => el.style.display = 'block');
+                if(dayDivider) dayDivider.style.display = 'block';
+                map.fitBounds(group.getBounds().pad(0.1));
+            } else if(tab === 'day1') {
+                btnDay1.className = "flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg bg-forest-900 text-white shadow transition-all duration-200 flex items-center justify-center space-x-1.5";
+                day1Groups.forEach(el => el.style.display = 'block');
+                day2Groups.forEach(el => el.style.display = 'none');
+                if(dayDivider) dayDivider.style.display = 'none';
+                
+                const day1MarkersGroup = new L.featureGroup([markers[0], markers[1], markers[2], markers[3]]);
+                map.fitBounds(day1MarkersGroup.getBounds().pad(0.2));
+            } else if(tab === 'day2') {
+                btnDay2.className = "flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg bg-forest-900 text-white shadow transition-all duration-200 flex items-center justify-center space-x-1.5";
+                day1Groups.forEach(el => el.style.display = 'none');
+                day2Groups.forEach(el => el.style.display = 'block');
+                if(dayDivider) dayDivider.style.display = 'none';
+                
+                const day2MarkersGroup = new L.featureGroup([markers[3], markers[4], markers[5]]);
+                map.fitBounds(day2MarkersGroup.getBounds().pad(0.2));
+            }
+        }
+    </script>
+</body>
+</html>
